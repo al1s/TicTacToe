@@ -1,3 +1,13 @@
+root {
+  --boardDimension: 3;
+}
+
+.board {
+  display: grid;
+  grid-template-rows: repeat(var(--boardDimension), minmax(50px, 1fr));
+  grid-template-columns: repeat(var(--boardDimension), minmax(50px, 1fr));
+}
+
 body {
   background-color: #fff;
   font-family: 'Exo 2', Lato, 'PT Sans', -apple-system, BlinkMacSystemFont,

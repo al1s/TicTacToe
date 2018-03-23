@@ -2,6 +2,7 @@
 /* eslint vars-on-top: 0 */
 /* eslint prefer-const: 0 */
 /* eslint arrow-parens: 0 */
+/* eslint consistent-return: 0 */
 
 // minimax(board, player  ) recursive;
 // ev(board, player) - evaluation function - value of a position for the player;
@@ -44,6 +45,11 @@ var App = {
     this.MAX = undefined; // computer player;
     this.MIN = undefined; // interactive player;
   },
+  // render the board;
+  // render the turn choice;
+  // chooseMove() on the next turn move;
+  // makeMove() to get the new board;
+  // render the changes on the board;
 };
 
 var Engine = {
@@ -53,36 +59,37 @@ var Engine = {
     this.player = this.player.bind(this);
     this.actions = this.actions.bind(this);
     this.makeMove = this.makeMove.bind(this);
-    this.result = this.result.bind(this);
+    this.chooseMove = this.chooseMove.bind(this);
     this.boardToOut = this.boardToOut.bind(this);
+    this.logDepth = this.logDepth.bind(this);
+    this.randomRange = this.randomRange.bind(this);
   },
 
-  not(player) {
-    return undefined;
-  },
-
-  minimax(board, move, player) {
+  minimax(board, move, player, depth) {
+    depth = depth || 0;
     var [terminal, utility] = this.utility(board, move, player);
     if (terminal) {
-      console.log(`terminal conditions: ${utility}`);
+      this.logDepth(depth, 'utility', utility);
       return utility;
     }
     var newBoard = this.makeMove(board, move, player);
     if (this.player(newBoard) === this.MAX) {
-      console.log(`next turn for ${this.MAX}`);
+      this.logDepth(++depth, 'turn', this.MAX);
       return Math.max.apply(
+        null,
         this.actions(newBoard).map(nextMove => {
-          console.log(`next move: ${nextMove}`);
-          return this.minimax(newBoard, nextMove, this.MAX);
+          this.logDepth(depth, 'move', nextMove);
+          return this.minimax(newBoard, nextMove, this.MAX, depth);
         }),
       );
     }
     if (this.player(newBoard) === this.MIN) {
-      console.log(`next turn for ${this.MIN}`);
+      this.logDepth(++depth, 'turn', this.MIN);
       return Math.min.apply(
+        null,
         this.actions(newBoard).map(nextMove => {
-          console.log(`next move: ${nextMove}`);
-          return this.minimax(newBoard, nextMove, this.MIN);
+          this.logDepth(depth, 'move', nextMove);
+          return this.minimax(newBoard, nextMove, this.MIN, depth);
         }),
       );
     }
@@ -126,7 +133,7 @@ var Engine = {
       // analyze diag where move takes place;
       var playerInDiag = 0;
       for (let z = 0; z < this.boardDimension; z++) {
-        if (newBoard[z + this.boardDimension * z]) {
+        if (newBoard[z + this.boardDimension * z] === player) {
           playerInDiag += 1;
         }
       }
@@ -140,7 +147,10 @@ var Engine = {
       var playerInDiag = 0;
       // analyze anti-diag where move takes place;
       for (let z = 0; z < this.boardDimension; z++) {
-        if (newBoard[(this.boardDimension - z) * (this.boardDimension - 1)]) {
+        if (
+          newBoard[(this.boardDimension - z) * (this.boardDimension - 1)] ===
+          player
+        ) {
           playerInDiag += 1;
         }
       }
@@ -157,7 +167,7 @@ var Engine = {
     return movesDone % 2 === 0 ? 'X' : '0';
   },
 
-  actions(board, player) {
+  actions(board) {
     var movesLeft = board.reduce((acc, elm, ndx) => {
       if (!elm) acc.push(ndx);
       return acc;
@@ -169,6 +179,50 @@ var Engine = {
     var newBoard = [...board];
     newBoard[move] = player;
     return newBoard;
+  },
+
+  chooseMove(board) {
+    var nextMove;
+    // if computer starts, then put 'X' either to center or to any corner;
+    if (this.actions(board) === this.board.length) {
+      var firstMoveArr = [];
+      firstMoveArr.push(0);
+      firstMoveArr.push(this.boardDimension - 1);
+      firstMoveArr.push(this.board.length - this.boardDimension - 1);
+      firstMoveArr.push(this.board.length - 1);
+      if (this.boardDimension % 2 !== 0) {
+        firstMoveArr.push(this.board.length - 1 / 2);
+      }
+      nextMove = this.randomRange(firstMoveArr);
+    } else {
+      // if game is in the middle, then enumerate available moves and
+      // call minimax for each, to find the best;
+      var availableMoves = this.actions(board).map(move => {
+        var utility = this.minimax(board, move, this.MAX);
+        return [move, utility];
+      });
+      console.log(availableMoves);
+      // if more than one move available at max utility, choose any of them.
+      var maxUtility = Math.max.call(...availableMoves.map(elm => elm[1]));
+      console.log(maxUtility);
+      // if more than one move available at max utility, choose any of them.
+      availableMoves = availableMoves.filter(elm => elm[1] === maxUtility);
+      console.log(availableMoves);
+      nextMove = this.randomRange(availableMoves)[0];
+    }
+    return nextMove;
+  },
+
+  randomRange(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  },
+
+  logDepth(depth, ...args) {
+    console.log(
+      `${depth}${new Array(depth * 2).fill('-').join('')}${args[0]}: ${
+        args[1]
+      }`,
+    );
   },
 
   boardToOut(board) {
@@ -205,84 +259,73 @@ var UI = {
     }
   },
 
-  drawBoard() {},
+  drawBoard(board) {
+    var hostElm = document.querySelector('#boardElm');
+    var boardHTML = board.map(elm => {
+      return `<div class="board__cell">${elm}</div>`;
+    });
+    this.addElm(boardHTML, hostElm);
+  },
+
+  addElm(elm, host) {
+    elm;
+  },
 };
+
 // let [gameEnded, winner] = winning(board);
 
-var Application = Object.assign({}, UI, App, Engine);
-Application.init();
-Application.listen();
-Application.start();
+Object.assign(App, UI, Engine);
+App.init();
+App.listen();
+App.start();
 
-// 3x3 board
-Application.board = [
-  'X',
-  '0',
-  'X',
-  undefined,
-  '0',
-  'X',
-  undefined,
-  undefined,
-  undefined,
-];
+/* 3x3 board
+X 0 _
+_ X _
+_ _ 0
+
+0 1 2
+3 4 5
+6 7 8
+
+*/
+App.board[0] = 'X';
+App.board[1] = '0';
+App.board[4] = 'X';
+App.board[8] = '0';
+
 /*
 // 4x4 board with a row and diag filled
-Application.board = [
-  'X',
-  undefined,
-  undefined,
-  'X',
-  undefined,
-  'X',
-  undefined,
-  'X',
-  undefined,
-  undefined,
-  'X',
-  'X',
-  '0',
-  '0',
-  '0',
-  undefined,
-];
+0 1 2 3
+4 5 6 7
+8 9 0 1
+2 3 4 5
+App.boardDimension = 4;
+App.board[0] = 'X';
+App.board[3] = 'X';
+App.board[5] = 'X';
+App.board[7] = 'X';
+App.board[10] = 'X';
+App.board[11] = 'X';
+App.board[12] = '0';
+App.board[13] = '0';
+App.board[14] = '0';
 
 // 4x4 board with a row and diag filled
-Application.board = [
-  'X',
-  undefined,
-  undefined,
-  '0',
-  'X',
-  undefined,
-  '0',
-  undefined,
-  'X',
-  '0',
-  undefined,
-  undefined,
-  undefined,
-  '0',
-  '0',
-  '0',
-];
-
-Application.board = [
-  'X',
-  undefined,
-  undefined,
-  '0',
-  'X',
-  undefined,
-  '0',
-  undefined,
-  undefined,
-  '0',
-  undefined,
-  undefined,
-  undefined,
-  '0',
-  '0',
-  '0',
-];
+App.boardDimension = 4;
+App.board[0] = 'X';
+App.board[3] = '0';
+App.board[4] = 'X';
+App.board[6] = '0';
+App.board[8] = 'X';
+App.board[9] = '0';
+App.board[13] = '0';
+App.board[14] = '0';
+App.board[15] = '0';
+// 4x4
+// X _ _ 0
+// X _ 0 _
+// X 0 _ _
+// _ 0 0 0
+//
 */
