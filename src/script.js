@@ -4,11 +4,15 @@
 /* eslint arrow-parens: 0 */
 /* eslint consistent-return: 0 */
 
-// (engine) add terminal conditions handler;
+// +(engine) add terminal conditions handler;
 // (engine) add start game routine - if the user have chosed 0, then comp should start;
-// (engine) check whether anti-diag analysis actially works;
+// (engine) add start game shortcuts - no need to run after first user move (to long);
+// (engine) start engine in async to UI;
+// +(engine) check whether anti-diag analysis actially works;
 // (UI) add flag - which turn is now;
 // (UI) add symbol choice dialog;
+// (UI) add game ending message;
+// (UI - minor) remove event handler on already clicked cell;
 
 // minimax(board, player  ) recursive;
 // ev(board, player) - evaluation function - value of a position for the player;
@@ -17,29 +21,16 @@
 // getMoveNumber(board) - return number of the moves done;
 
 /*
-OXOXOXO.O - board coding;
-winning masks:
-[
-0b100010001,
-0b001010100,
-0b100100100,
-0b010010010,
-0b001001001,
-0b111000000,
-0b000111000,
-0b000000111]
-
-[
-0b1000010000100001,
-0b0001001001001000,
-0b1000100010001000,
-0b0100010001000100,
-0b0010001000100010,
-0b0001000100010001,
-0b1111000000000000,
-0b0000111100000000,
-0b0000000011110000,
-0b0000000000001111]
+The board is an array with available states: '0', 'X' and undefined;
+The game logic is:
+  - render the board;
+  - render the turn choice;
+  - chooseMove() on the next turn move;
+  - makeMove() to get the new board;
+  - render the changes on the board;
+  - analyze whether we have terminal conditions:
+    - YES - stop the game; show the message;
+    - NO - keep playing;
 */
 
 var App = {
@@ -51,11 +42,6 @@ var App = {
     this.MAX = undefined; // computer player;
     this.MIN = undefined; // interactive player;
   },
-  // render the board;
-  // render the turn choice;
-  // chooseMove() on the next turn move;
-  // makeMove() to get the new board;
-  // render the changes on the board;
 };
 
 var Engine = {
@@ -221,6 +207,12 @@ var Engine = {
     return nextMove;
   },
 
+  moveAndGetUtil(...args) {
+    this.board = this.makeMove(...args);
+    this.drawBoard(this.board);
+    return this.utility(...args);
+  },
+
   randomRange(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
   },
@@ -295,12 +287,18 @@ var UI = {
     );
   },
 
-  handleBoardClick(e, cnt) {
-    this.board[cnt] = this.board[cnt] || this.MIN;
-    this.drawBoard(this.board);
-    var nextMove = this.chooseMove(this.board);
-    this.board[nextMove] = this.MAX;
-    this.drawBoard(this.board);
+  handleBoardClick(e, move) {
+    if (!this.board[move]) {
+      var terminal = this.moveAndGetUtil(this.board, move, this.MIN);
+      console.log(terminal);
+
+      if (terminal[0]) console.log(`You win!`);
+      else {
+        var nextMove = this.chooseMove(this.board);
+        terminal = this.moveAndGetUtil(this.board, nextMove, this.MAX);
+        if (terminal[0]) console.log(`Computer wins!`);
+      }
+    }
   },
 };
 
@@ -321,18 +319,18 @@ _ _ 0
 6 7 8
 
 */
-// App.board[0] = 'X';
-// App.board[1] = '0';
-// App.board[4] = 'X';
-// App.board[8] = '0';
-
-App.board[0] = '0';
-App.board[1] = 'X';
-App.board[3] = 'X';
+App.board[0] = 'X';
+App.board[1] = '0';
 App.board[4] = 'X';
-App.board[5] = '0';
-App.board[6] = 'X';
-App.board[7] = '0';
+App.board[8] = '0';
+
+// App.board[0] = '0';
+// App.board[1] = 'X';
+// App.board[3] = 'X';
+// App.board[4] = 'X';
+// App.board[5] = '0';
+// App.board[6] = 'X';
+// App.board[7] = '0';
 App.drawBoard(App.board);
 
 /*
