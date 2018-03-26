@@ -4,6 +4,12 @@
 /* eslint arrow-parens: 0 */
 /* eslint consistent-return: 0 */
 
+// (engine) add terminal conditions handler;
+// (engine) add start game routine - if the user have chosed 0, then comp should start;
+// (engine) check whether anti-diag analysis actially works;
+// (UI) add flag - which turn is now;
+// (UI) add symbol choice dialog;
+
 // minimax(board, player  ) recursive;
 // ev(board, player) - evaluation function - value of a position for the player;
 // winning(board) - returns boolean and player dependent on the position;
@@ -103,7 +109,6 @@ var Engine = {
     var newBoard = this.makeMove(board, move, player);
     // console.log(this.boardToOut(newBoard));
 
-    if (!this.actions(newBoard)) return [true, 0];
     var row = Math.ceil((move + 1) / this.boardDimension) - 1;
     var col = move % this.boardDimension;
     // analyze column where move takes place;
@@ -159,6 +164,9 @@ var Engine = {
       else if (playerInDiag === this.boardDimension && player === this.MIN)
         return [true, -1];
     }
+
+    if (!this.actions(newBoard)) return [true, 0];
+
     return [undefined, undefined];
   },
 
@@ -203,7 +211,7 @@ var Engine = {
       });
       console.log(availableMoves);
       // if more than one move available at max utility, choose any of them.
-      var maxUtility = Math.max.call(...availableMoves.map(elm => elm[1]));
+      var maxUtility = Math.max.apply(null, availableMoves.map(elm => elm[1]));
       console.log(maxUtility);
       // if more than one move available at max utility, choose any of them.
       availableMoves = availableMoves.filter(elm => elm[1] === maxUtility);
@@ -240,11 +248,14 @@ var UI = {
   listen() {
     this.drawBoard = this.drawBoard.bind(this);
     this.symbolChoiceHandler = this.symbolChoiceHandler.bind(this);
-    this.userSymbolChoice = document.radioBtnX
-      ? document.radioBtnX
-      : document.radioBtn0;
+    this.drawBoard = this.drawBoard.bind(this);
+    this.addElm = this.addElm.bind(this);
+    this.handleBoardClick = this.handleBoardClick.bind(this);
     this.frmSymbolChoice = document.querySelector('#frmSymbolChoice');
     this.frmSymbolChoice.addEventListener('submit', this.symbolChoiceHandler);
+    this.boardElm = document.querySelector('#boardElm');
+    this.initializeBoard();
+    this.drawBoard(this.board);
   },
 
   symbolChoiceHandler(e) {
@@ -252,23 +263,44 @@ var UI = {
     e.preventDefault();
     e.stopPropagation();
     var data = new FormData(this.frmSymbolChoice);
-    for (let elm of data) {
-      console.log(`${elm[0]}: ${elm[1]}`);
-      this.MIN = elm[1];
+    data.forEach(elm => {
+      console.log(elm);
+      this.MIN = elm;
       this.MAX = this.MIN === 'X' ? '0' : 'X';
-    }
+    });
+  },
+  initializeBoard() {
+    document.documentElement.style.setProperty(
+      '--boardDimension',
+      this.boardDimension,
+    );
   },
 
   drawBoard(board) {
-    var hostElm = document.querySelector('#boardElm');
-    var boardHTML = board.map(elm => {
-      return `<div class="board__cell">${elm}</div>`;
-    });
-    this.addElm(boardHTML, hostElm);
+    var boardHTML = board
+      .map(elm => {
+        return `<div class="board__cell" id="boardCellElm">
+                  <span>${elm || ''}</span>
+                </div>`;
+      })
+      .join('');
+    this.addElm(boardHTML, this.boardElm);
   },
 
   addElm(elm, host) {
-    elm;
+    host.innerHTML = elm;
+    var boardCells = document.querySelectorAll('#boardCellElm');
+    boardCells.forEach((cell, ndx) =>
+      cell.addEventListener('click', e => this.handleBoardClick(e, ndx)),
+    );
+  },
+
+  handleBoardClick(e, cnt) {
+    this.board[cnt] = this.board[cnt] || this.MIN;
+    this.drawBoard(this.board);
+    var nextMove = this.chooseMove(this.board);
+    this.board[nextMove] = this.MAX;
+    this.drawBoard(this.board);
   },
 };
 
@@ -289,10 +321,19 @@ _ _ 0
 6 7 8
 
 */
-App.board[0] = 'X';
-App.board[1] = '0';
+// App.board[0] = 'X';
+// App.board[1] = '0';
+// App.board[4] = 'X';
+// App.board[8] = '0';
+
+App.board[0] = '0';
+App.board[1] = 'X';
+App.board[3] = 'X';
 App.board[4] = 'X';
-App.board[8] = '0';
+App.board[5] = '0';
+App.board[6] = 'X';
+App.board[7] = '0';
+App.drawBoard(App.board);
 
 /*
 // 4x4 board with a row and diag filled

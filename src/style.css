@@ -1,17 +1,45 @@
-root {
+:root {
   --boardDimension: 3;
+  --primary-color: #000;
+  --secondary-color: #fff;
+  --bkgd-color: var(--secondary-color);
 }
 
 .board {
   display: grid;
   grid-template-rows: repeat(var(--boardDimension), minmax(50px, 1fr));
   grid-template-columns: repeat(var(--boardDimension), minmax(50px, 1fr));
+  height: 80vw;
+  margin: 3rem auto;
+  outline: 1px solid var(--secondary-color);
+  width: 80vw;
+}
+
+.board__cell {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  outline: 1px solid var(--primary-color);
+  padding: 0.1rem;
+  font-size: 5rem;
+}
+
+@media screen and (min-width: 30rem) {
+  .board {
+    width: 30vw;
+    height: 30vw;
+  }
+
+  .board__cell {
+    font-size: 3rem;
+  }
 }
 
 body {
-  background-color: #fff;
-  font-family: 'Exo 2', Lato, 'PT Sans', -apple-system, BlinkMacSystemFont,
-    Roboto, Ubuntu, 'Droid Sans', 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--bkgd-color);
+  font-family: 'Indie Flower', cursive, 'PT Sans', -apple-system,
+    BlinkMacSystemFont, Roboto, Ubuntu, 'Droid Sans', 'Helvetica Neue', Arial,
+    sans-serif;
   font-size: 1rem;
 }
 
