@@ -5,14 +5,17 @@
 /* eslint consistent-return: 0 */
 
 // +(engine) add terminal conditions handler;
-// (engine) add start game routine - if the user have chosed 0, then comp should start;
-// (engine) add start game shortcuts - no need to run after first user move (to long);
+// +(engine) add start game routine - if the user have chosen 0, then comp should start;
+// +(engine) add start game shortcuts - no need to run after first user move (to long);
 // (engine) start engine in async to UI;
 // +(engine) check whether anti-diag analysis actially works;
+// +(engine) fix halting when player starts from the center;
 // (UI) add flag - which turn is now;
 // (UI) add symbol choice dialog;
 // (UI) add game ending message;
-// (UI - minor) remove event handler on already clicked cell;
+// (UI) stop the game after terminal condition is reached;
+// +(UI - minor) remove event handler on already clicked cell;
+// (UI) when the game is finished, wait and start it again;
 
 // minimax(board, player  ) recursive;
 // ev(board, player) - evaluation function - value of a position for the player;
@@ -39,23 +42,56 @@ var App = {
     this.board = new Array(this.boardDimension * this.boardDimension).fill(
       undefined,
     );
-    this.MAX = undefined; // computer player;
-    this.MIN = undefined; // interactive player;
-    this.boardToOut = this.boardToOut.bind(this);
+    this.MAX = '0'; // computer player;
+    this.MIN = 'X'; // interactive player;
+    this.restartPauseDuration = 3; // in seconds;
     this.moveAndGetUtil = this.moveAndGetUtil.bind(this);
+    this.turnInformer = this.turnInformer.bind(this);
+    this.randomRange = this.randomRange.bind(this);
+    this.boardToOut = this.boardToOut.bind(this);
   },
 
   moveAndGetUtil(...args) {
     this.board = this.makeMove(...args);
-    this.drawBoard(this.board);
+    // this.drawBoard(this.board); // replace with drawCell();
+    this.drawCell(args[1], args[2]);
     return this.utility(...args);
   },
 
-  handleTerminalConditions(terminal) {
-    console.log(terminal);
-    if (terminal[1] === -1) console.log('You win!');
-    else if (terminal[1] === 1) console.log('Computer wins!');
-    else if (terminal[1] === 0) console.log('Draw!');
+  computerMove() {
+    this.turnInformer(this.board);
+    this.chooseMove(this.board)
+      .then(nextMove => this.moveAndGetUtil(this.board, nextMove, this.MAX))
+      .then(terminal => {
+        if (terminal[0]) this.handleTerminalConditions(terminal[1]);
+        else this.turnInformer(this.board);
+      });
+  },
+
+  handleTerminalConditions(condition) {
+    log.debug(`handleTerminalConditions got condition: ${condition}`);
+    if (condition === -1) log.info('You win!');
+    else if (condition === 1) log.info('Computer wins!');
+    else if (condition === 0) log.info('Draw!');
+    this.stopListenElms(this.boardElm);
+    window.setTimeout(
+      () => this.resetBoard(),
+      this.restartPauseDuration * 1000,
+    );
+  },
+
+  resetBoard() {
+    log.debug('resetBoard started');
+    // var player = this.MIN;
+    // this.init();
+    // this.listen();
+    this.board = new Array(this.boardDimension * this.boardDimension).fill(
+      undefined,
+    );
+    this.drawBoard(this.board);
+    // this.MIN = player;
+    // this.MAX = this.MIN === 'X' ? '0' : 'X';
+    if (this.MAX === 'X') this.computerMove();
   },
 
   boardToOut(board) {
@@ -67,6 +103,16 @@ var App = {
       console.log(toOut);
     }
   },
+
+  turnInformer(board) {
+    var whoseTurn = this.player(board);
+    if (whoseTurn === this.MAX) log.info('Computer turn');
+    else log.info('Player turn');
+  },
+
+  randomRange(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  },
 };
 
 var Engine = {
@@ -76,9 +122,11 @@ var Engine = {
     this.player = this.player.bind(this);
     this.actions = this.actions.bind(this);
     this.makeMove = this.makeMove.bind(this);
+    this.getBestDebutMoves = this.getBestDebutMoves.bind(this);
     this.chooseMove = this.chooseMove.bind(this);
     this.logDepth = this.logDepth.bind(this);
-    this.randomRange = this.randomRange.bind(this);
+    this.debug = 0;
+    this.logLine = 1;
   },
 
   minimax(board, move, player, depth) {
@@ -117,7 +165,7 @@ var Engine = {
     // if no more turns left - draw;
 
     var newBoard = this.makeMove(board, move, player);
-    // console.log(this.boardToOut(newBoard));
+    // log.debug(this.boardToOut(newBoard));
 
     var row = Math.ceil((move + 1) / this.boardDimension) - 1;
     var col = move % this.boardDimension;
@@ -199,25 +247,39 @@ var Engine = {
     return newBoard;
   },
 
+  getBestDebutMoves(availableMoves) {
+    var nextMoveArr = [];
+    nextMoveArr.push(0);
+    nextMoveArr.push(this.boardDimension - 1);
+    nextMoveArr.push(this.board.length - this.boardDimension);
+    nextMoveArr.push(this.board.length - 1);
+    if (this.boardDimension % 2 !== 0) {
+      nextMoveArr.push((this.board.length - 1) / 2);
+    }
+    log.debug(`All available debut moves: ${JSON.stringify(nextMoveArr)}`);
+    nextMoveArr = nextMoveArr.filter(elm => availableMoves.includes(elm));
+    return this.randomRange(nextMoveArr);
+  },
+
   chooseMove(board) {
     return new Promise(resolve => {
       var nextMove;
       var availableMoves = this.actions(this.board);
       // if computer starts, then put 'X' either to center or to any corner;
-      if (
-        availableMoves.length === this.board.length ||
-        availableMoves.length === this.board.length - 1
-      ) {
-        var nextMoveArr = [];
-        nextMoveArr.push(0);
-        nextMoveArr.push(this.boardDimension - 1);
-        nextMoveArr.push(this.board.length - this.boardDimension - 1);
-        nextMoveArr.push(this.board.length - 1);
+      if (availableMoves.length === this.board.length) {
+        nextMove = this.getBestDebutMoves(availableMoves);
+      } else if (availableMoves.length === this.board.length - 1) {
+        // if a player starts, then put 'X' to center if available or to any corner;
+        log.debug(`We are on the second move routine, choosing for next move`);
+
+        nextMove = this.getBestDebutMoves(availableMoves);
+        log.debug(`Preliminary chosen move: ${nextMove}`);
+
         if (this.boardDimension % 2 !== 0) {
-          nextMoveArr.push(this.board.length - 1 / 2);
+          var suggestedMove = (this.board.length - 1) / 2;
+          log.debug(`Available moves are: ${JSON.stringify(availableMoves)}`);
+          if (availableMoves.includes(suggestedMove)) nextMove = suggestedMove;
         }
-        nextMoveArr = nextMoveArr.filter(elm => availableMoves.includes(elm));
-        nextMove = this.randomRange(nextMoveArr);
       } else {
         // if game is in the middle, then enumerate available moves and
         // call minimax for each, to find the best;
@@ -225,58 +287,72 @@ var Engine = {
           var utility = this.minimax(board, move, this.MAX);
           return [move, utility];
         });
-        console.log(availableMoves);
+        log.debug(`Available moves: ${JSON.stringify(availableMoves)}`);
         // if more than one move available at max utility, choose any of them.
         var maxUtility = Math.max.apply(
           null,
           availableMoves.map(elm => elm[1]),
         );
-        console.log(maxUtility);
+        log.debug(`Max utility: ${maxUtility}`);
         // if more than one move available at max utility, choose any of them.
         availableMoves = availableMoves.filter(elm => elm[1] === maxUtility);
-        console.log(availableMoves);
+        log.debug(
+          `Available moves after max filter: ${JSON.stringify(availableMoves)}`,
+        );
         nextMove = this.randomRange(availableMoves)[0];
       }
       resolve(nextMove);
     });
   },
 
-  randomRange(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
-  },
-
   logDepth(depth, ...args) {
-    console.log(
-      `${depth}${new Array(depth * 2).fill('-').join('')}${args[0]}: ${
-        args[1]
-      }`,
-    );
+    if (this.debug === 9) {
+      console.log(
+        `${this.logLine++}. ${depth}${new Array(depth * 2).fill('-').join('')}${
+          args[0]
+        }: ${args[1]}`,
+      );
+    }
   },
 };
 
 var UI = {
   listen() {
+    log.debug(`UI listen called`);
     this.drawBoard = this.drawBoard.bind(this);
+    this.drawCell = this.drawCell.bind(this);
     this.symbolChoiceHandler = this.symbolChoiceHandler.bind(this);
     this.addElm = this.addElm.bind(this);
-    this.handleBoardClick = this.handleBoardClick.bind(this);
+    this.handleClick = this.handleClick.bind(this);
     this.frmSymbolChoice = document.querySelector('#frmSymbolChoice');
-    this.frmSymbolChoice.addEventListener('submit', this.symbolChoiceHandler);
+    this.frmSymbolChoice.removeEventListener(
+      'change',
+      this.symbolChoiceHandler,
+    );
+    this.frmSymbolChoice.addEventListener('change', this.symbolChoiceHandler);
+    // this.menuElmAll = document.querySelectorAll('.menu__element');
+    // this.menuElmAll.forEach(elm =>
+    //   elm.removeEventListener('click', this.symbolChoiceHandler),
+    // );
+    // this.menuElmAll.forEach(elm =>
+    //   elm.addEventListener('click', this.symbolChoiceHandler),
+    // );
     this.boardElm = document.querySelector('#boardElm');
+    this.boardCells = document.querySelectorAll('.board__cell');
     this.initializeBoard();
     this.drawBoard(this.board);
   },
 
   symbolChoiceHandler(e) {
-    console.log('clicked');
-    e.preventDefault();
-    e.stopPropagation();
+    log.debug(e);
+    // e.preventDefault();
     var data = new FormData(this.frmSymbolChoice);
     data.forEach(elm => {
-      console.log(elm);
+      log.debug(`User's choise: ${elm}`);
       this.MIN = elm;
       this.MAX = this.MIN === 'X' ? '0' : 'X';
     });
+    this.resetBoard();
   },
 
   initializeBoard() {
@@ -288,47 +364,51 @@ var UI = {
 
   drawBoard(board) {
     var boardHTML = board
-      .map(elm => {
-        return `<div class="board__cell" id="boardCellElm">
+      .map((elm, ndx) => {
+        return `<div class="board__cell" id="boardCellElm_${ndx}">
                   <span>${elm || ''}</span>
                 </div>`;
       })
       .join('');
-    this.addElm(boardHTML, this.boardElm);
+    this.addElm(this.boardElm, boardHTML);
   },
 
-  addElm(elm, host) {
+  addElm(host, elm) {
     host.innerHTML = elm;
-    var boardCells = document.querySelectorAll('#boardCellElm');
-    boardCells.forEach((cell, ndx) =>
-      cell.addEventListener('click', e => this.handleBoardClick(e, ndx)),
+    host.childNodes.forEach(child =>
+      child.addEventListener('click', this.handleClick),
     );
   },
 
-  handleBoardClick(e, move) {
-    console.log('Player clicked');
+  stopListenElms(host) {
+    host.childNodes.forEach(child =>
+      child.removeEventListener('click', this.handleClick),
+    );
+  },
+
+  drawCell(cell, value) {
+    var cellElm = document.querySelector(`#boardCellElm_${cell}`);
+    cellElm.innerHTML = value;
+  },
+
+  handleClick(e) {
+    e.currentTarget.removeEventListener(e.type, this.handleBoardClick);
+    log.debug(`Player clicked ${e.currentTarget.id}`);
+    var move = e.currentTarget.id.split('_')[1];
 
     if (!this.board[move]) {
       var terminal = this.moveAndGetUtil(this.board, move, this.MIN);
-      console.log(terminal);
+      log.debug(
+        `Condition after move to ${move} is ${
+          Boolean(terminal[0]) ? 'terminal' : 'non-terminal'
+        }`,
+      );
 
-      if (terminal[0]) this.handleTerminalConditions(terminal);
-      else {
-        // var nextMove = this.chooseMove(this.board);
-        // terminal = this.moveAndGetUtil(this.board, nextMove, this.MAX);
-        this.chooseMove(this.board)
-          .then(nextMove => this.moveAndGetUtil(this.board, nextMove, this.MAX))
-          .then(terminal => {
-            if (terminal[0]) this.handleTerminalConditions(terminal);
-          });
-        // console.log(terminal);
-        // if (terminal[0]) console.log(`Computer wins!`);
-      }
+      if (terminal[0]) this.handleTerminalConditions(terminal[1]);
+      else this.computerMove();
     }
   },
 };
-
-// let [gameEnded, winner] = winning(board);
 
 Object.assign(App, UI, Engine);
 App.init();
@@ -345,10 +425,10 @@ _ _ 0
 6 7 8
 
 */
-// App.board[0] = 'X';
+// App.board[6] = 'X';
 // App.board[1] = '0';
 // App.board[4] = 'X';
-// App.board[8] = '0';
+// App.board[5] = '0';
 
 // App.board[0] = '0';
 // App.board[1] = 'X';

@@ -5,25 +5,25 @@
   <title>TicTacToe</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta charset="utf-8">
-  <!-- <link href="https://fonts.googleapis.com/css?family=Exo+2" rel="stylesheet"> -->
   <link href="https://fonts.googleapis.com/css?family=Indie+Flower" rel="stylesheet">
   <link href="css/style.css" rel="stylesheet">
 </head>
 
 <body>
   <div class="main">
-    <form action="/" id="frmSymbolChoice">
-      <input type="radio" name="symbolChoice" id="radioBtnX" value="X" checked>
-      <label for="radioBtnX">X</label>
-      <input type="radio" name="symbolChoice" id="radioBtn0" value="0">
-      <label for="radioBtn)">0</label>
-      <input type="submit" value="Submit" id="btnSubmitChoice">
-    </form>
-    <div class="board" id="boardElm">
-
+    <div class="menu">
+      <form action="/" id="frmSymbolChoice">
+        <input class="form__input" type="radio" name="symbolChoice" id="radioBtnX" value="X" checked>
+        <label class="menu__element" for="radioBtnX">X</label>
+        <input class="form__input" type="radio" name="symbolChoice" id="radioBtn0" value="0">
+        <label class="menu__element" for="radioBtn0">0</label>
+        <!-- <input type="submit" value="Submit" id="btnSubmitChoice"> -->
+      </form>
     </div>
+    <div class="board" id="boardElm"></div>
   </div>
 </body>
+<script src="js/loglevel.js"></script>
 <script async src="js/script.js "></script>
 
 </html>

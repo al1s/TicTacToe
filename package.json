@@ -51,5 +51,8 @@
     "jasmine": "^2.8.0",
     "postcss-uncss": "^0.15.0",
     "uncss": "^0.15.0"
+  },
+  "dependencies": {
+    "loglevel": "^1.6.1"
   }
 }
