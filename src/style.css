@@ -3,6 +3,7 @@
   --primary-color: #000;
   --secondary-color: #fff;
   --bkgd-color: var(--secondary-color);
+  --active-color: green;
 }
 
 .board {
@@ -42,6 +43,14 @@
   padding-right: 0.7rem;
   height: 1rem;
 }
+.menu__element--active::before {
+  background-color: var(--active-color);
+  content: '';
+  height: 0.4rem;
+  position: absolute;
+  top: 0.3rem;
+  width: 2.7rem;
+}
 
 .form__input:checked + .menu__element {
   /* border: 5px solid red; */
@@ -56,7 +65,40 @@
   position: absolute;
 }
 
+.modal {
+  background-color: rgba(76, 76, 76, 0.6);
+  color: var(--secondary-color);
+  font-size: 3rem;
+  font-weight: 900;
+  height: 100%;
+  left: 0rem;
+  padding: 19vh 25vw;
+  position: absolute;
+  text-align: center;
+  top: 0rem;
+  width: 100%;
+}
+
+.--hidden {
+  left: -9999px;
+}
+
 @media screen and (min-width: 30rem) {
+  .board {
+    width: 30vw;
+    height: 30vw;
+  }
+
+  .board__cell {
+    font-size: 3rem;
+  }
+
+  .modal {
+    padding: 19vh 35vw;
+  }
+}
+
+@media screen and (min-width: 50rem) {
   .board {
     width: 30vw;
     height: 30vw;

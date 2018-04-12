@@ -7,15 +7,15 @@
 // +(engine) add terminal conditions handler;
 // +(engine) add start game routine - if the user have chosen 0, then comp should start;
 // +(engine) add start game shortcuts - no need to run after first user move (to long);
-// (engine) start engine in async to UI;
+// +(engine) start engine in async to UI;
 // +(engine) check whether anti-diag analysis actially works;
 // +(engine) fix halting when player starts from the center;
 // (UI) add flag - which turn is now;
-// (UI) add symbol choice dialog;
+// +(UI) add symbol choice dialog;
 // (UI) add game ending message;
-// (UI) stop the game after terminal condition is reached;
+// +(UI) stop the game after terminal condition is reached;
 // +(UI - minor) remove event handler on already clicked cell;
-// (UI) when the game is finished, wait and start it again;
+// +(UI) when the game is finished, wait and start it again;
 
 // minimax(board, player  ) recursive;
 // ev(board, player) - evaluation function - value of a position for the player;
@@ -44,7 +44,7 @@ var App = {
     );
     this.MAX = '0'; // computer player;
     this.MIN = 'X'; // interactive player;
-    this.restartPauseDuration = 3; // in seconds;
+    this.restartPauseDuration = 2; // in seconds;
     this.moveAndGetUtil = this.moveAndGetUtil.bind(this);
     this.turnInformer = this.turnInformer.bind(this);
     this.randomRange = this.randomRange.bind(this);
@@ -53,7 +53,6 @@ var App = {
 
   moveAndGetUtil(...args) {
     this.board = this.makeMove(...args);
-    // this.drawBoard(this.board); // replace with drawCell();
     this.drawCell(args[1], args[2]);
     return this.utility(...args);
   },
@@ -70,27 +69,31 @@ var App = {
 
   handleTerminalConditions(condition) {
     log.debug(`handleTerminalConditions got condition: ${condition}`);
-    if (condition === -1) log.info('You win!');
-    else if (condition === 1) log.info('Computer wins!');
-    else if (condition === 0) log.info('Draw!');
+    var msg = '';
+    if (condition === -1) {
+      msg = 'You win!';
+      this.showMessage(msg);
+    } else if (condition === 1) {
+      msg = 'Computer wins!';
+      this.showMessage(msg);
+    } else if (condition === 0) {
+      msg = 'Draw!';
+      this.showMessage(msg);
+    }
     this.stopListenElms(this.boardElm);
-    window.setTimeout(
-      () => this.resetBoard(),
-      this.restartPauseDuration * 1000,
-    );
+    window.setTimeout(() => {
+      this.clearMessage();
+      this.resetBoard();
+    }, this.restartPauseDuration * 1000);
   },
 
   resetBoard() {
     log.debug('resetBoard started');
-    // var player = this.MIN;
-    // this.init();
-    // this.listen();
     this.board = new Array(this.boardDimension * this.boardDimension).fill(
       undefined,
     );
     this.drawBoard(this.board);
-    // this.MIN = player;
-    // this.MAX = this.MIN === 'X' ? '0' : 'X';
+    // this.changeActiveStyle(this.MIN);
     if (this.MAX === 'X') this.computerMove();
   },
 
@@ -106,8 +109,13 @@ var App = {
 
   turnInformer(board) {
     var whoseTurn = this.player(board);
-    if (whoseTurn === this.MAX) log.info('Computer turn');
-    else log.info('Player turn');
+    if (whoseTurn === this.MAX) {
+      log.info('Computer turn');
+      // this.changeActiveStyle(this.MAX);
+    } else {
+      log.info('Player turn');
+      // this.changeActiveStyle(this.MIN);
+    }
   },
 
   randomRange(arr) {
@@ -324,21 +332,18 @@ var UI = {
     this.symbolChoiceHandler = this.symbolChoiceHandler.bind(this);
     this.addElm = this.addElm.bind(this);
     this.handleClick = this.handleClick.bind(this);
+    this.changeActiveStyle = this.changeActiveStyle.bind(this);
+    this.showMessage = this.showMessage.bind(this);
+    this.clearMessage = this.clearMessage.bind(this);
     this.frmSymbolChoice = document.querySelector('#frmSymbolChoice');
     this.frmSymbolChoice.removeEventListener(
       'change',
       this.symbolChoiceHandler,
     );
     this.frmSymbolChoice.addEventListener('change', this.symbolChoiceHandler);
-    // this.menuElmAll = document.querySelectorAll('.menu__element');
-    // this.menuElmAll.forEach(elm =>
-    //   elm.removeEventListener('click', this.symbolChoiceHandler),
-    // );
-    // this.menuElmAll.forEach(elm =>
-    //   elm.addEventListener('click', this.symbolChoiceHandler),
-    // );
     this.boardElm = document.querySelector('#boardElm');
     this.boardCells = document.querySelectorAll('.board__cell');
+    this.msgElm = document.querySelector('#msgElm');
     this.initializeBoard();
     this.drawBoard(this.board);
   },
@@ -408,69 +413,44 @@ var UI = {
       else this.computerMove();
     }
   },
+
+  changeActiveStyle(player) {
+    document
+      .querySelector(`#label${player === 'X' ? '0' : 'X'}`)
+      .classList.remove('menu__element--active');
+    document
+      .querySelector(`#label${player}`)
+      .classList.add('menu__element--active');
+  },
+
+  showMessage(msg) {
+    log.info(msg);
+    this.msgElm.innerHTML = msg;
+    this.msgElm.classList.toggle('--hidden');
+  },
+
+  clearMessage() {
+    this.msgElm.innerHTML = '';
+    this.msgElm.classList.toggle('--hidden');
+  },
 };
 
+log.setLevel('info');
 Object.assign(App, UI, Engine);
 App.init();
 App.listen();
 App.start();
 
 /* 3x3 board
-X 0 _
-_ X _
-_ _ 0
-
 0 1 2
 3 4 5
 6 7 8
-
 */
-// App.board[6] = 'X';
-// App.board[1] = '0';
-// App.board[4] = 'X';
-// App.board[5] = '0';
-
-// App.board[0] = '0';
-// App.board[1] = 'X';
-// App.board[3] = 'X';
-// App.board[4] = 'X';
-// App.board[5] = '0';
-// App.board[6] = 'X';
-// App.board[7] = '0';
 App.drawBoard(App.board);
 
-/*
-// 4x4 board with a row and diag filled
+/* 4x4 board with a row and diag filled
 0 1 2 3
 4 5 6 7
 8 9 0 1
 2 3 4 5
-App.boardDimension = 4;
-App.board[0] = 'X';
-App.board[3] = 'X';
-App.board[5] = 'X';
-App.board[7] = 'X';
-App.board[10] = 'X';
-App.board[11] = 'X';
-App.board[12] = '0';
-App.board[13] = '0';
-App.board[14] = '0';
-
-// 4x4 board with a row and diag filled
-App.boardDimension = 4;
-App.board[0] = 'X';
-App.board[3] = '0';
-App.board[4] = 'X';
-App.board[6] = '0';
-App.board[8] = 'X';
-App.board[9] = '0';
-App.board[13] = '0';
-App.board[14] = '0';
-App.board[15] = '0';
-// 4x4
-// X _ _ 0
-// X _ 0 _
-// X 0 _ _
-// _ 0 0 0
-//
 */
