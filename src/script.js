@@ -10,9 +10,9 @@
 // +(engine) start engine in async to UI;
 // +(engine) check whether anti-diag analysis actially works;
 // +(engine) fix halting when player starts from the center;
-// (UI) add flag - which turn is now;
+// +(UI) add flag - which turn is now;
 // +(UI) add symbol choice dialog;
-// (UI) add game ending message;
+// +(UI) add game ending message;
 // +(UI) stop the game after terminal condition is reached;
 // +(UI - minor) remove event handler on already clicked cell;
 // +(UI) when the game is finished, wait and start it again;
@@ -45,6 +45,7 @@ var App = {
     this.MAX = '0'; // computer player;
     this.MIN = 'X'; // interactive player;
     this.restartPauseDuration = 2; // in seconds;
+    this.pauseMove = 1; // in seconds;
     this.moveAndGetUtil = this.moveAndGetUtil.bind(this);
     this.turnInformer = this.turnInformer.bind(this);
     this.randomRange = this.randomRange.bind(this);
@@ -58,7 +59,7 @@ var App = {
   },
 
   computerMove() {
-    this.turnInformer(this.board);
+    // this.turnInformer(this.board);
     this.chooseMove(this.board)
       .then(nextMove => this.moveAndGetUtil(this.board, nextMove, this.MAX))
       .then(terminal => {
@@ -70,16 +71,9 @@ var App = {
   handleTerminalConditions(condition) {
     log.debug(`handleTerminalConditions got condition: ${condition}`);
     var msg = '';
-    if (condition === -1) {
-      msg = 'You win!';
-      this.showMessage(msg);
-    } else if (condition === 1) {
-      msg = 'Computer wins!';
-      this.showMessage(msg);
-    } else if (condition === 0) {
-      msg = 'Draw!';
-      this.showMessage(msg);
-    }
+    if (condition === -1) this.showMessage('You win!');
+    else if (condition === 1) this.showMessage('Computer wins!');
+    else if (condition === 0) this.showMessage('Draw!');
     this.stopListenElms(this.boardElm);
     window.setTimeout(() => {
       this.clearMessage();
@@ -93,7 +87,7 @@ var App = {
       undefined,
     );
     this.drawBoard(this.board);
-    // this.changeActiveStyle(this.MIN);
+    this.changeActiveStyle(this.MIN);
     if (this.MAX === 'X') this.computerMove();
   },
 
@@ -111,10 +105,10 @@ var App = {
     var whoseTurn = this.player(board);
     if (whoseTurn === this.MAX) {
       log.info('Computer turn');
-      // this.changeActiveStyle(this.MAX);
+      this.changeActiveStyle(this.MAX);
     } else {
       log.info('Player turn');
-      // this.changeActiveStyle(this.MIN);
+      this.changeActiveStyle(this.MIN);
     }
   },
 
@@ -410,7 +404,12 @@ var UI = {
       );
 
       if (terminal[0]) this.handleTerminalConditions(terminal[1]);
-      else this.computerMove();
+      else {
+        this.turnInformer(this.board);
+        setTimeout(() => {
+          this.computerMove();
+        }, this.pauseMove * 1000);
+      }
     }
   },
 

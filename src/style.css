@@ -3,7 +3,7 @@
   --primary-color: #000;
   --secondary-color: #fff;
   --bkgd-color: var(--secondary-color);
-  --active-color: green;
+  --active-color: #3cb371;
 }
 
 .board {
